@@ -56,6 +56,35 @@ class TokenTracker:
                 "uptime_seconds": round(time.time() - self._start_time, 1),
             }
 
+    def snapshot(self) -> Dict[str, Dict[str, int]]:
+        """Capture current totals for later diffing."""
+        with self._lock:
+            return {k: dict(v) for k, v in self._agents.items()}
+
+    def diff(self, before: Dict[str, Dict[str, int]]) -> Dict[str, Any]:
+        """Return tokens used since the snapshot."""
+        with self._lock:
+            agents = {}
+            for name, current in self._agents.items():
+                prev = before.get(name, {"input_tokens": 0, "output_tokens": 0, "requests": 0})
+                inp = current["input_tokens"] - prev["input_tokens"]
+                out = current["output_tokens"] - prev["output_tokens"]
+                if inp > 0 or out > 0:
+                    agents[name] = {"input_tokens": inp, "output_tokens": out}
+
+            total_input = sum(a["input_tokens"] for a in agents.values())
+            total_output = sum(a["output_tokens"] for a in agents.values())
+            input_cost = (total_input / 1_000_000) * GEMINI_FLASH_INPUT_PRICE
+            output_cost = (total_output / 1_000_000) * GEMINI_FLASH_OUTPUT_PRICE
+
+            return {
+                "agents": agents,
+                "input_tokens": total_input,
+                "output_tokens": total_output,
+                "total_tokens": total_input + total_output,
+                "estimated_cost_usd": round(input_cost + output_cost, 8),
+            }
+
     def reset(self):
         with self._lock:
             self._agents.clear()
