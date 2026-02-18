@@ -58,17 +58,22 @@ class TokenTracker:
                 "uptime_seconds": round(time.time() - self._start_time, 1),
             }
 
-    def snapshot(self) -> Dict[str, Dict[str, int]]:
+    def snapshot(self) -> dict:
         """Capture current totals for later diffing."""
         with self._lock:
-            return {k: dict(v) for k, v in self._agents.items()}
+            return {
+                "agents": {k: dict(v) for k, v in self._agents.items()},
+                "debug_pos": len(self._debug_log),
+            }
 
-    def diff(self, before: Dict[str, Dict[str, int]]) -> Dict[str, Any]:
+    def diff(self, before: dict) -> Dict[str, Any]:
         """Return tokens used since the snapshot."""
         with self._lock:
+            prev_agents = before.get("agents", {})
+            prev_debug_pos = before.get("debug_pos", 0)
             agents = {}
             for name, current in self._agents.items():
-                prev = before.get(name, {"input_tokens": 0, "output_tokens": 0, "requests": 0})
+                prev = prev_agents.get(name, {"input_tokens": 0, "output_tokens": 0, "requests": 0})
                 inp = current["input_tokens"] - prev["input_tokens"]
                 out = current["output_tokens"] - prev["output_tokens"]
                 if inp > 0 or out > 0:
@@ -85,7 +90,7 @@ class TokenTracker:
                 "output_tokens": total_output,
                 "total_tokens": total_input + total_output,
                 "estimated_cost_usd": round(input_cost + output_cost, 8),
-                "debug": list(self._debug_log[-10:]),
+                "debug": self._debug_log[prev_debug_pos:],
             }
 
     def reset(self):

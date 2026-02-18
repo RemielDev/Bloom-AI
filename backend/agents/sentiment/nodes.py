@@ -193,7 +193,7 @@ class AnalyzeCommunityIntent(BaseNode[SentimentAnalysisState]):
         except Exception as e:
             import logging
             logging.getLogger(__name__).error(f"CommunityIntentAgent FAILED: {e}", exc_info=True)
-            token_tracker.track("CommunityIntentAgent_ERROR", 0, 0)
+            token_tracker.track(f"CommunityIntentAgent_ERROR: {e}", 0, 0)
             ctx.state.chat_analysis.community_intent = CommunityIntent(
                 intent=None, reason=None
             )
