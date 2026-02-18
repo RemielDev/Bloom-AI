@@ -13,24 +13,19 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { useAvatarHeadshot } from '@/hooks/useAvatarHeadshot';
 import type { Message } from '@/types/sentiment';
-import { createClient } from '@supabase/supabase-js';
-import { 
-  User, 
-  MessageSquare, 
-  TrendingUp, 
-  Shield, 
-  AlertTriangle, 
+import { getSupabase } from '@/lib/supabase';
+import {
+  User,
+  MessageSquare,
+  TrendingUp,
+  Shield,
+  AlertTriangle,
   Clock,
   UserX,
   Ban,
   History
 } from 'lucide-react';
 import { moderationApi } from '@/lib/api/sentiment';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
 
 interface PlayerDetailsDialogProps {
   message: Message | null;
@@ -58,7 +53,7 @@ export default function PlayerDetailsDialog({ message, isOpen, onClose }: Player
   const fetchPlayerStats = async (playerId: number) => {
     setLoading(true);
     try {
-      const { data: messages } = await supabase
+      const { data: messages } = await getSupabase()
         .from('messages')
         .select('*')
         .eq('player_id', playerId)

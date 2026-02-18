@@ -5,12 +5,7 @@ import ChatLog from '@/components/chat-log/Chat';
 import SentimentAnalyzer from "@/components/sentiment-analyzer/SentimentAnalyzer";
 import { useLiveMessages } from '@/hooks/useLiveMessages';
 import { Card, CardContent } from '@/components/ui/card';
-import { createClient } from '@supabase/supabase-js';
-
-// Supabase client initialization
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { getSupabase } from '@/lib/supabase';
 
 // StatsCard Component
 interface StatsCardProps {
@@ -52,9 +47,10 @@ export default function ModerationPage() {
   // Fetch stats function
   const fetchStats = useCallback(async () => {
     try {
+      const sb = getSupabase();
       const [messagesResponse, playersResponse] = await Promise.all([
-        supabase.from('messages').select('*', { count: 'exact', head: true }),
-        supabase.from('players').select('*', { count: 'exact', head: true })
+        sb.from('messages').select('*', { count: 'exact', head: true }),
+        sb.from('players').select('*', { count: 'exact', head: true })
       ]);
 
       if (messagesResponse.error) {
@@ -104,14 +100,15 @@ export default function ModerationPage() {
   }, [messages, isLoading]);
 
   useEffect(() => {
-    const messagesSubscription = supabase
+    const sb = getSupabase();
+    const messagesSubscription = sb
       .channel('public:messages')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
         fetchStats();
       })
       .subscribe();
 
-    const playersSubscription = supabase
+    const playersSubscription = sb
       .channel('public:players')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
         fetchStats();
@@ -119,8 +116,8 @@ export default function ModerationPage() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(messagesSubscription);
-      supabase.removeChannel(playersSubscription);
+      sb.removeChannel(messagesSubscription);
+      sb.removeChannel(playersSubscription);
     };
   }, [fetchStats]);
 
